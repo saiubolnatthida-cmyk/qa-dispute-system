@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Dispute System</title>
+    <!-- Tailwind CSS & SweetAlert2 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
+        .main-container { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border-radius: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); margin: 2rem auto; max-width: 900px; overflow: hidden; }
+        .header-section { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 2.5rem 2rem; text-align: center; }
+        .main-title { font-size: 2.5rem; font-weight: 800; text-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .tab-btn { position: relative; }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #2563eb, #1e40af); }
+        .submit-btn { background: linear-gradient(135deg, #2563eb, #1e40af); }
+        .submit-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4); }
+        
+        /* Status Colors */
+        .status-pending, .status-รอ-Dispute, .status-รอ-dispute { background: rgba(253, 230, 138, 0.4); color: #9A3412; border: 1px solid rgba(252, 211, 77, 0.5);}
+        .status-Dispute-แล้ว { background: rgba(59, 130, 246, 0.2); color: #1E40AF; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .status-Dispute-สำเร็จ, .status-dispute-สำเร็จ { background: rgba(34, 197, 94, 0.2); color: #166534; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .status-Dispute-ไม่สำเร็จ, .status-dispute-ไม่สำเร็จ { background: rgba(239, 68, 68, 0.2); color: #B91C1C; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .status-Sup-Senior-ไม่-Dispute { background: rgba(107, 114, 128, 0.2); color: #374151; border: 1px solid rgba(107, 114, 128, 0.3); }
+        .status-na { background: rgba(209, 213, 219, 0.3); color: #4B5563; border: 1px solid rgba(209, 213, 219, 0.4); }
+        input:disabled, textarea:disabled { background-color: rgba(229, 231, 235, 0.5) !important; cursor: not-allowed; opacity: 0.7; }
+    </style>
+</head>
+<body>
+<div class="main-container">
+    <div class="header-section">
+        <h1 class="main-title">✨ QA Dispute System ✨</h1>
+        <p id="userEmail" class="mt-2 font-semibold text-sm text-white/90"></p>
+    </div>
+
+    <div class="flex bg-gray-50 border-b">
+        <button class="tab-btn active flex-1 p-4 text-center font-semibold text-gray-700 transition" onclick="showTab('dispute', event)">📝 ยื่น Dispute</button>
+        <button class="tab-btn flex-1 p-4 text-center font-semibold text-gray-700 transition" onclick="showTab('status', event)">📋 ตรวจสอบสถานะ</button>
+    </div>
+
+    <!-- Tab 1: Submit Form -->
+    <div id="dispute-tab" class="p-6">
+        <div id="form-notification" class="hidden"></div>
+        <form id="disputeForm" class="space-y-4">
+            <div>
+                <label class="font-semibold text-gray-800">📅 วันที่ Dispute</label>
+                <input type="text" id="disputeDate" class="w-full mt-1 p-2 border rounded bg-gray-100" readonly>
+            </div>
+            <div>
+                <label class="font-semibold text-gray-800">QA Week *</label>
+                <input type="text" id="qaWeek" list="qaWeek-options" class="w-full mt-1 p-2 border rounded" placeholder="เลือกหรือพิมพ์ QA Week" required>
+                <datalist id="qaWeek-options"></datalist>
+            </div>
+            <div>
+                <label class="font-semibold text-gray-800">🤔 เหตุผลที่ QA หักคะแนน *</label>
+                <textarea id="qaReason" class="w-full mt-1 p-2 border rounded min-h-[100px]" required></textarea>
+            </div>
+            <div>
+                <label class="font-semibold text-gray-800">📄 รายละเอียดที่ต้องการ Dispute *</label>
+                <textarea id="details" class="w-full mt-1 p-2 border rounded min-h-[100px]" required></textarea>
+            </div>
+            <div>
+               <label class="font-semibold text-gray-800">🔗 แนบลิงก์ Ticket *</label>
+               <input type="url" id="ticketLink" class="w-full mt-1 p-2 border rounded" required placeholder="https://...">
+           </div>
+            <div>
+                <!-- Changed from Kubbase to Internal KB -->
+                <label class="font-semibold text-gray-800">🔗 ลิงก์ Ref Slack/Internal KB</label>
+                <textarea id="refLink" class="w-full mt-1 p-2 border rounded min-h-[80px]" placeholder="ใส่ 1 ลิงก์ ต่อ 1 บรรทัด"></textarea>
+            </div>
+            <div>
+                <label class="font-semibold text-gray-800">📝 หมายเหตุเพิ่มเติม</label>
+                <textarea id="notes" class="w-full mt-1 p-2 border rounded min-h-[80px]"></textarea>
+            </div>
+            <button type="submit" class="submit-btn w-full p-3 font-bold text-white rounded-lg shadow-lg transition">💾 บันทึกข้อมูล</button>
+        </form>
+    </div>
+
+    <!-- Tab 2: Status View -->
+    <div id="status-tab" class="p-6 hidden">
+        <div class="flex flex-col md:flex-row gap-4 mb-4">
+            <div class="flex-1">
+                <label class="font-semibold text-gray-800">ค้นหาจาก QA Week:</label>
+                <input type="text" id="weekSearchInput" list="week-search-options" class="w-full mt-1 p-2 border rounded" placeholder="พิมพ์หรือเลือก Week...">
+                <datalist id="week-search-options"></datalist>
+            </div>
+            <div class="flex-1">
+                <label class="font-semibold text-gray-800">ค้นหาจาก Email:</label>
+                <input type="email" id="emailSearchInput" class="w-full mt-1 p-2 border rounded" placeholder="พิมพ์ Email ที่ต้องการค้นหา...">
+            </div>
+        </div>
+        <div id="statusContainer" class="space-y-4">
+            <p class="text-center text-gray-500 py-8">ปล่อยว่างเพื่อแสดงเคสของคุณ หรือกรอกเงื่อนไขเพื่อค้นหา</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function debounce(func, delay) { 
+    let timeout; 
+    return function(...args) { 
+        clearTimeout(timeout); 
+        timeout = setTimeout(() => func.apply(this, args), delay); 
+    }; 
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isFormTimeOpen()) {
+        const form = document.getElementById('disputeForm');
+        Array.from(form.elements).forEach(element => { element.disabled = true; });
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) { submitButton.textContent = '❌ นอกเวลาทำการ'; submitButton.classList.add('bg-gray-400'); }
+        const notificationDiv = document.getElementById('form-notification');
+        notificationDiv.innerHTML = `<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md mb-6" role="alert"><p class="font-bold">ระบบปิดรับฟอร์มชั่วคราว</p><p class="text-sm">ปิดรับตั้งแต่เวลา 02:00 ของวันอังคาร และเปิดอีกครั้งในวันศุกร์เวลา 00:00 น.</p></div>`;
+        notificationDiv.classList.remove('hidden');
+    } else {
+        setCurrentDateTime();
+        document.getElementById('disputeForm').addEventListener('submit', handleSubmit);
+    }
+    
+    // Setup Datalists
+    const qaWeekDatalistForm = document.getElementById('qaWeek-options');
+    const qaWeekDatalistSearch = document.getElementById('week-search-options');
+    for (let i = 1; i <= 54; i++) {
+        const option = document.createElement('option');
+        option.value = 'Week ' + i;
+        qaWeekDatalistForm.appendChild(option.cloneNode(true));
+        qaWeekDatalistSearch.appendChild(option.cloneNode(true));
+    }
+    
+    // Setup Search
+    const debouncedSearch = debounce(loadStatusData, 500);
+    document.getElementById('weekSearchInput').addEventListener('input', debouncedSearch);
+    document.getElementById('emailSearchInput').addEventListener('input', debouncedSearch);
+    
+    // Get User Email
+    google.script.run.withSuccessHandler(email => { 
+        document.getElementById('userEmail').textContent = "Logged in as: " + email; 
+    }).getCurrentUserEmail();
+});
+
+function isFormTimeOpen() {
+    const now = new Date();
+    const day = now.getDay();
+    const hours = now.getHours();
+    if (day === 2 && hours >= 2) return false;
+    return [0, 1, 2, 5, 6].includes(day);
+}
+
+function setCurrentDateTime() { 
+    const now = new Date(); 
+    document.getElementById('disputeDate').value = now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }); 
+}
+
+function showTab(tabName, event) {
+    document.getElementById('dispute-tab').classList.toggle('hidden', tabName !== 'dispute');
+    document.getElementById('status-tab').classList.toggle('hidden', tabName !== 'status');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    
+    if (tabName === 'status') {
+        document.getElementById('weekSearchInput').value = '';
+        document.getElementById('emailSearchInput').value = '';
+        loadStatusData();
+    }
+}
+
+function handleSubmit(e) {
+    e.preventDefault();
+    const formData = {
+        disputeDate: new Date().toISOString(),
+        qaWeek: document.getElementById('qaWeek').value.trim(),
+        details: document.getElementById('details').value.trim(),
+        qaReason: document.getElementById('qaReason').value.trim(),
+        ticketLink: document.getElementById('ticketLink').value.trim(),
+        refLink: document.getElementById('refLink').value.trim() || '-',
+        notes: document.getElementById('notes').value.trim() || '-'
+    };
+    
+    Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    
+    google.script.run
+        .withSuccessHandler(responseMessage => {
+            Swal.fire({ icon: 'success', title: responseMessage, showConfirmButton: false, timer: 2000 });
+            document.getElementById('disputeForm').reset();
+            setCurrentDateTime();
+        })
+        .withFailureHandler(error => Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด!', text: error.message }))
+        .submitData(formData);
+}
+
+function loadStatusData() {
+    const container = document.getElementById('statusContainer');
+    container.innerHTML = `<p class="text-center text-gray-500 py-8">กำลังโหลดข้อมูล...</p>`;
+    const filters = {
+        week: document.getElementById('weekSearchInput').value,
+        email: document.getElementById('emailSearchInput').value
+    };
+    
+    google.script.run
+        .withSuccessHandler(displayStatusData)
+        .withFailureHandler(error => {
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาดในการโหลดข้อมูล', text: error.message });
+            container.innerHTML = `<p class="text-center text-red-500 py-8">ดึงข้อมูลไม่สำเร็จ โปรดลองใหม่อีกครั้ง</p>`;
+        })
+        .getStatusData(filters);
+}
+
+function linkify(text) {
+    if (!text) return '';
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const textWithBreaks = text.replace(/\n/g, '<br>');
+    return textWithBreaks.replace(urlRegex, (url) => `<a href="${url}" target="_blank" class="text-blue-600 hover:underline">${url}</a>`);
+}
+
+function displayStatusData(data) {
+    const container = document.getElementById('statusContainer');
+    if (!data || data.length === 0) {
+        container.innerHTML = `<div class="p-6 rounded-lg text-center bg-gray-50 border">ไม่พบข้อมูลที่ตรงตามเงื่อนไข</div>`;
+        return;
+    }
+    container.innerHTML = data.map(item => {
+        const statusClass = getStatusClass(item.status);
+        const statusDisplay = item.status ? `${getStatusEmoji(item.status)} ${item.status}` : '';
+
+        const createRow = (emoji, label, content) => {
+            if (!content || content === '-') return '';
+            return `<div class="mt-2">
+                        <p class="text-sm text-gray-800 font-semibold">${emoji} ${label}</p>
+                        <div class="text-sm text-gray-600 pl-6 break-words">${linkify(content)}</div>
+                    </div>`;
+        };
+
+        return `<div class="p-4 rounded-lg shadow-sm bg-white border border-gray-200">
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="font-bold text-blue-800 text-lg">${item.email}</h3>
+                <span class="text-xs font-semibold px-2 py-1 rounded-full ${statusClass}">${statusDisplay}</span>
+            </div>
+            <div class="text-xs text-gray-500">
+                <strong>Submit:</strong> ${item.submitTimestamp} | <strong>Dispute:</strong> ${item.disputeDate} | <strong>Week:</strong> ${item.qaWeek}
+            </div>
+            <hr class="my-2 border-gray-100">
+            <div>
+                ${createRow('🤔', 'เหตุผลที่ QA หักคะแนน:', item.qaReason)}
+                ${createRow('📄', 'รายละเอียดที่ต้องการ Dispute:', item.details)}
+                ${createRow('🔗', 'ลิงก์ Ticket:', item.ticketLink)}
+                ${createRow('🔗', 'ลิงก์อ้างอิง:', item.refLink)}
+                ${createRow('📝', 'หมายเหตุ:', item.notes)}
+                ${createRow('🧑‍⚖️', 'Sup/Senior Remark:', item.remark)}
+                ${createRow('🕵️', 'QA Remark:', item.columnL)}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function getStatusClass(status) { 
+    if (!status) return 'status-na'; 
+    const cleanStatus = status.trim().replace(/[\s\/]+/g, '-'); 
+    return 'status-' + cleanStatus; 
+}
+
+function getStatusEmoji(status) { 
+    const emojis = { 
+        '⏳ รอ Dispute': '⏳', 'รอ dispute': '⏳',
+        '🔄 Dispute แล้ว': '🔄', 
+        'Dispute สำเร็จ': '✅', 'dispute สำเร็จ': '✅', 
+        'Dispute ไม่สำเร็จ': '❌', 'dispute ไม่สำเร็จ': '❌', 
+        'Sup/Senior ไม่ Dispute': '✋' 
+    }; 
+    return emojis[status] || ''; 
+}
+</script>
+</body>
+</html>
